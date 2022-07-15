@@ -10,8 +10,7 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 
 contract HexagonNft is ERC721URIStorage, Ownable {
     using Counters for Counters.Counter;
-
     Counters.Counter private _tokenIdCounter;
 
-    constructor() ERC721("MyToken", "MTK") {}
+    constructor() ERC721("HexagonNFT", "HXNFT") {}
 }
