@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-// Import this file to use console.log
-import "hardhat/console.sol";
-
 // Openzeppelin contracts
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -19,19 +16,20 @@ contract HexagonNft is ERC721URIStorage, Ownable, ReentrancyGuard {
     uint256 public maxSupply = 100;
     uint256 public totalSupply;
 
-    mapping(address => uint256) mintedAddresses;
-
     // normal mint
     uint256 public mintPrice = 0.4 ether;
     uint256 public maxPerWalletMint = 4;
     bool public mintingEnabled;
 
+    mapping(address => uint256) totalMinted;
+
     // wl mint
     uint256 public wlPrice = 0.1 ether;
-    uint256 public maxPerWalletWL = 2;
+    uint256 public maxPerWalletWl = 2;
     uint256 public totalWl;
     bool public wlMintingEnabled;
 
+    mapping(address => uint256) totalMintedWl;
     mapping(address => bool) wlAddresses;
 
     // events
@@ -52,7 +50,6 @@ contract HexagonNft is ERC721URIStorage, Ownable, ReentrancyGuard {
     }
 
     // Whitelist Functions
-
     function addAddressToWhiteList(address addr) public onlyOwner {
         require(!wlAddresses[addr], "Address already whitelisted !");
         wlAddresses[addr] = true;
@@ -73,13 +70,18 @@ contract HexagonNft is ERC721URIStorage, Ownable, ReentrancyGuard {
         return totalWl;
     }
 
+    function getTotalWlMinted(address addr) public view returns (uint256) {
+        return totalMintedWl[addr];
+    }
+
     function mintWl(string memory uri, uint256 quantity) public payable {
         require(wlMintingEnabled, "WL minting is not enabled");
         require(verifyWhiteList(msg.sender), "Address not whitelisted");
         require(msg.value >= wlPrice, "Not enough ether to mint");
         require(totalSupply + quantity <= maxSupply, "Max supply reached");
+        require(quantity <= maxPerWalletWl, "Max per wallet reached");
         require(
-            mintedAddresses[msg.sender] + quantity <= maxPerWalletWL,
+            totalMintedWl[msg.sender] + quantity <= maxPerWalletWl,
             "Max per wallet reached"
         );
 
@@ -90,6 +92,12 @@ contract HexagonNft is ERC721URIStorage, Ownable, ReentrancyGuard {
             _safeMint(msg.sender, newItemId);
             _setTokenURI(newItemId, uri);
 
+            if (totalMintedWl[msg.sender] == 0) {
+                totalMintedWl[msg.sender] = quantity;
+            } else {
+                totalMintedWl[msg.sender]++;
+            }
+
             emit Minted(msg.sender, newItemId);
         }
     }
@@ -98,8 +106,14 @@ contract HexagonNft is ERC721URIStorage, Ownable, ReentrancyGuard {
 
     function mint(string memory uri, uint256 quantity) public payable {
         require(mintingEnabled, "WL minting is not enabled");
+        require(totalSupply + quantity <= maxSupply, "Max per wallet reached");
         require(msg.value >= mintPrice, "Not enough ether to mint");
         require(totalSupply + quantity <= maxSupply, "Max supply reached");
+        require(quantity <= maxPerWalletMint, "Max per wallet reached");
+        require(
+            totalMinted[msg.sender] + quantity <= maxPerWalletMint,
+            "Max per wallet reached"
+        );
 
         for (uint256 i = 0; i < quantity; i++) {
             tokenId.increment();
@@ -107,6 +121,12 @@ contract HexagonNft is ERC721URIStorage, Ownable, ReentrancyGuard {
 
             _safeMint(msg.sender, newItemId);
             _setTokenURI(newItemId, uri);
+
+            if (totalMinted[msg.sender] == 0) {
+                totalMinted[msg.sender] = quantity;
+            } else {
+                totalMinted[msg.sender]++;
+            }
 
             emit Minted(msg.sender, newItemId);
         }
