@@ -3,7 +3,8 @@ pragma solidity ^0.8.9;
 
 // Import this file to use console.log
 import "hardhat/console.sol";
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+
+// Openzeppelin contracts
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
@@ -12,28 +13,35 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 contract HexagonNft is ERC721URIStorage, Ownable, ReentrancyGuard {
     // token counter
     using Counters for Counters.Counter;
-    Counters.Counter private _tokenId;
+    Counters.Counter private tokenId;
 
-    // token properties
-    uint256 public mintPrice;
-    uint256 public wlPrice;
-    uint256 public maxSupply;
+    // genral
+    uint256 public maxSupply = 100;
     uint256 public totalSupply;
-    uint256 public maxPerWalletWL;
-    uint256 public maxPerWalletMint;
 
-    // Enable Minting
+    mapping(address => uint256) mintedAddresses;
+
+    // normal mint
+    uint256 public mintPrice = 0.4 ether;
+    uint256 public maxPerWalletMint = 4;
     bool public mintingEnabled;
+
+    // wl mint
+    uint256 public wlPrice = 0.1 ether;
+    uint256 public maxPerWalletWL = 2;
+    uint256 public totalWl;
     bool public wlMintingEnabled;
 
+    mapping(address => bool) wlAddresses;
+
+    // events
+    event Minted(address indexed to, uint256 indexed tokenId);
+
     constructor() ERC721("HexagonNFT", "HXNFT") {
-        mintPrice = 0.4 ether;
-        wlPrice = 0.1 ether;
-        maxSupply = 20;
         totalSupply = 0;
-        maxPerWalletMint = 4;
-        maxPerWalletWL = 2;
     }
+
+    // Enable Minting Functions
 
     function enableMinting(bool enabled) public onlyOwner {
         mintingEnabled = enabled;
@@ -42,6 +50,77 @@ contract HexagonNft is ERC721URIStorage, Ownable, ReentrancyGuard {
     function enableWhiteList(bool enabled) public onlyOwner {
         wlMintingEnabled = enabled;
     }
+
+    // Whitelist Functions
+
+    function addAddressToWhiteList(address addr) public onlyOwner {
+        require(!wlAddresses[addr], "Address already whitelisted !");
+        wlAddresses[addr] = true;
+        totalWl++;
+    }
+
+    function verifyWhiteList(address addr) public view returns (bool) {
+        return wlAddresses[addr];
+    }
+
+    function removeAddressFromWhiteList(address addr) public onlyOwner {
+        require(wlAddresses[addr], "Address not whitelisted !");
+        wlAddresses[addr] = false;
+        totalWl--;
+    }
+
+    function getTotalWl() public view returns (uint256) {
+        return totalWl;
+    }
+
+    function mintWl(string memory uri, uint256 quantity) public payable {
+        require(wlMintingEnabled, "WL minting is not enabled");
+        require(verifyWhiteList(msg.sender), "Address not whitelisted");
+        require(msg.value >= wlPrice, "Not enough ether to mint");
+        require(totalSupply + quantity <= maxSupply, "Max supply reached");
+        require(
+            mintedAddresses[msg.sender] + quantity <= maxPerWalletWL,
+            "Max per wallet reached"
+        );
+
+        for (uint256 i = 0; i < quantity; i++) {
+            tokenId.increment();
+            uint256 newItemId = tokenId.current();
+
+            _safeMint(msg.sender, newItemId);
+            _setTokenURI(newItemId, uri);
+
+            emit Minted(msg.sender, newItemId);
+        }
+    }
+
+    // Mint Functions
+
+    function mint(string memory uri, uint256 quantity) public payable {
+        require(mintingEnabled, "WL minting is not enabled");
+        require(msg.value >= mintPrice, "Not enough ether to mint");
+        require(totalSupply + quantity <= maxSupply, "Max supply reached");
+
+        for (uint256 i = 0; i < quantity; i++) {
+            tokenId.increment();
+            uint256 newItemId = tokenId.current();
+
+            _safeMint(msg.sender, newItemId);
+            _setTokenURI(newItemId, uri);
+
+            emit Minted(msg.sender, newItemId);
+        }
+    }
+
+    // Burn Function
+
+    function burn(uint256[] calldata tokenIds) public onlyOwner {
+        for (uint256 i = 0; i < tokenIds.length; i++) {
+            _burn(tokenIds[i]);
+        }
+    }
+
+    // Withdraw Function
 
     function withdraw() public onlyOwner nonReentrant {
         (bool success, ) = msg.sender.call{value: address(this).balance}("");
