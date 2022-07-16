@@ -92,6 +92,8 @@ contract HexagonNft is ERC721URIStorage, Ownable, ReentrancyGuard {
             _safeMint(msg.sender, newItemId);
             _setTokenURI(newItemId, uri);
 
+            totalSupply + quantity;
+
             if (totalMintedWl[msg.sender] == 0) {
                 totalMintedWl[msg.sender] = quantity;
             } else {
@@ -121,6 +123,8 @@ contract HexagonNft is ERC721URIStorage, Ownable, ReentrancyGuard {
 
             _safeMint(msg.sender, newItemId);
             _setTokenURI(newItemId, uri);
+
+            totalSupply + quantity;
 
             if (totalMinted[msg.sender] == 0) {
                 totalMinted[msg.sender] = quantity;
