@@ -77,7 +77,7 @@ contract HexagonNft is ERC721URIStorage, Ownable, ReentrancyGuard {
     function mintWl(string memory uri, uint256 quantity) public payable {
         require(wlMintingEnabled, "WL minting is not enabled");
         require(verifyWhiteList(msg.sender), "Address not whitelisted");
-        require(msg.value >= wlPrice, "Not enough ether to mint");
+        require(msg.value == wlPrice * quantity, "Not enough ether to mint");
         require(totalSupply + quantity <= maxSupply, "Max supply reached");
         require(quantity <= maxPerWalletWl, "Max per wallet reached");
         require(
@@ -107,7 +107,7 @@ contract HexagonNft is ERC721URIStorage, Ownable, ReentrancyGuard {
     function mint(string memory uri, uint256 quantity) public payable {
         require(mintingEnabled, "WL minting is not enabled");
         require(totalSupply + quantity <= maxSupply, "Max per wallet reached");
-        require(msg.value >= mintPrice, "Not enough ether to mint");
+        require(msg.value == mintPrice * quantity, "Not enough ether to mint");
         require(totalSupply + quantity <= maxSupply, "Max supply reached");
         require(quantity <= maxPerWalletMint, "Max per wallet reached");
         require(
