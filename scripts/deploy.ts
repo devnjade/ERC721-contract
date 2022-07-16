@@ -1,12 +1,14 @@
 import { ethers } from "hardhat";
 
 async function main() {
+  const HexagonNft = await ethers.getContractFactory("HexagonNft");
+  const hexagonNft = await HexagonNft.deploy();
 
-  console.log("Lock with 1 ETH deployed to:", lock.address);
+  await hexagonNft.deployed();
+
+  console.log("HexagonNft deployed to:", hexagonNft.address);
 }
 
-// We recommend this pattern to be able to use async/await everywhere
-// and properly handle errors.
 main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
